@@ -83,6 +83,8 @@ public class MyClient {
 					messageTracker = receiveCompliantData("OK", dataReader);
 				} else if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("OK")){
 					continue;
+				} else if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("JCPL")) {
+					continue;
 				} else {
 					System.out.println("Received " + jobData[0] + ". Failed to schedule, expected JOBN.");
 					break;
