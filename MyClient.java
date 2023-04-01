@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 public class MyClient {
 
+	static boolean debug = true;
+
 	public static void main(String[] args) {
 
 		try {
@@ -41,7 +43,7 @@ public class MyClient {
 
 			//Send AUTH username
 			String username = System.getProperty("user.name");
-			sendData("AUTH" + username, dataOut);
+			sendData("AUTH " + username, dataOut);
 
 			//Receive OK
 			messageTracker = receiveCompliantData("OK", dataReader);
@@ -86,7 +88,9 @@ public class MyClient {
 				} else if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("JCPL")) {
 					continue;
 				} else {
-					System.out.println("Received " + jobData[0] + ". Failed to schedule, expected JOBN.");
+					if(debug == true) {
+						System.out.println("Received " + jobData[0] + ". Failed to schedule, expected JOBN.");
+					}
 					break;
 				}
 			}
@@ -112,13 +116,17 @@ public class MyClient {
 	public static void sendData(String s, OutputStream o) throws IOException {
 		String messageToSend = s + "\n";
 		o.write(messageToSend.getBytes());
-		System.out.println("Sent " + s + ".");
+		if(debug == true) {
+			System.out.println("Sent " + s + ".");
+		}
 		o.flush();
 	}
 
 	public static String receiveData(BufferedReader b) throws IOException {
 		String messageReceived = b.readLine();
-		System.out.println("Received " + messageReceived + ".");
+		if(debug == true) {
+			System.out.println("Received " + messageReceived + ".");
+		}
 		return messageReceived;
 	}
 
@@ -126,13 +134,19 @@ public class MyClient {
 		if(s != null && !s.isEmpty()) {
 			String messageReceived = b.readLine();
 			if (messageReceived.equals(s)) {
-				System.out.println("Received " + messageReceived + ". Authenticated.");
+				if(debug == true) {
+					System.out.println("Received " + messageReceived + ". Authenticated.");
+				}
 			} else {
-				System.out.println("Received " + messageReceived + ". Failed to authenticate, expected " + s + ".");
+				if(debug == true) {
+					System.out.println("Received " + messageReceived + ". Failed to authenticate, expected " + s + ".");
+				}
 			}
 			return messageReceived;
 		} else {
-			System.out.println("Received a null or empty String. Failed to authenticate.");
+			if(debug == true) {
+				System.out.println("Received a null or empty String. Failed to authenticate.");
+			}
 			return "NONE";
 		}
 	}
@@ -146,17 +160,25 @@ public class MyClient {
 		int numServers = Integer.parseInt(serverData[1]);
 		ArrayList<String[]> serverDataArray = new ArrayList<String[]>();
 
-		System.out.println("Created empty serverDataArray Array List with length " + numServers + ".");
+		if(debug == true) {
+			System.out.println("Created empty serverDataArray Array List with length " + numServers + ".");
+		}
 
 		for(int i = 0; i < numServers; i++){
 			s = b.readLine();
-			//System.out.println(i + " is still less than " + numServers + " continue reading and splitting.");
-			System.out.println("Server at location " + i + " has info: " + s + ".");
+			if(debug == true) {
+				//System.out.println(i + " is still less than " + numServers + " continue reading and splitting.");
+				System.out.println("Server at location " + i + " has info: " + s + ".");
+			}
 			serverDataArray.add(s.split(" "));
-			System.out.println("Splitting server " + i + " info into serverDataArray location " + i + ".");
+			if(debug == true) {
+				System.out.println("Splitting server " + i + " info into serverDataArray location " + i + ".");
+			}
 		}
 
-		System.out.println("Successfully split all server info into serverDataArray" + ".");
+		if(debug == true) {
+			System.out.println("Successfully split all server info into serverDataArray" + ".");
+		}
 
 		String largestServer = " ";
 		int numLargestServers = 0;
@@ -170,14 +192,16 @@ public class MyClient {
 			}
 		}
 
-		//get the number of servers of the largest type
+		//get the number of servers of the largest type, if there are two types of server of the same size get the first type identified only
 		for(int i = 0; i < serverDataArray.size(); i++){
-			if(numCPU == Integer.parseInt(serverDataArray.get(i)[4])) {
+			if(numCPU == Integer.parseInt(serverDataArray.get(i)[4]) && serverDataArray.get(i)[0].equals(largestServer)) {
 				numLargestServers++;
 			}
 		}
+		if(debug == true) {
+			System.out.println("Finished calculating serverDataArray. There are " + numLargestServers + " servers of largest type " + largestServer + ".");
+		}
 
-		System.out.println("Finished calculating serverDataArray. There are " + numLargestServers + " servers of largest type " + largestServer + ".");
 		String[] calculatedServers = new String[2];
 		calculatedServers[0] = largestServer;
 		calculatedServers[1] = String.valueOf(numLargestServers);
@@ -200,26 +224,25 @@ public class MyClient {
 				returnData[3] = jobData[5]; // required processors
 			} else {
 				returnData[0] = jobData[0]; // message type failsafe
-				System.out.println("Received " + returnData[0] + ". Failed to authenticate, expected JOBN.");
+				if(debug == true) {
+					System.out.println("Received " + returnData[0] + ". Failed to authenticate, expected JOBN.");
+				}
 			}
 			return returnData;
 		} else {
-			System.out.println("Received a null or empty String. Failed to authenticate.");
+			if(debug == true) {
+				System.out.println("Received a null or empty String. Failed to authenticate.");
+			}
 			return null;
 		}
-
-		//print out job data for better readability of jobs
-		//System.out.println("Number of job data lines is " + jobData.length + ".");
-
-		//for(int i = 0; i < jobData.length; i++){
-		//	System.out.println("Job data at array location " + i + " is " + jobData[i]);
-		//}
 	}
 
 	public static void scheduleJob(String[] sa, String s, int i, OutputStream o, BufferedReader b) throws IOException {
 		//Schedule a job // SCHD
-		System.out.println(sa[0] + " received, start scheduling job with job ID as " + sa[1] + ", with number of " + s + "-type servers to schedule to being " + i + ".");
-		String jobMessage = "SCHD " + sa[1] + " " + s + " " + i + "\n";
+		if(debug == true) {
+			System.out.println(sa[0] + " received, start scheduling job with job ID as " + sa[1] + ", with number of " + s + "-type servers to schedule to being " + i + ".");
+		}
+		String jobMessage = "SCHD " + sa[1] + " " + s + " " + i;
 		sendData(jobMessage, o);
 	}
 }
