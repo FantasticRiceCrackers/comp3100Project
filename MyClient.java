@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class MyClient {
 
-	static boolean debug = true;
+	static boolean debug = false;
 
 	public static void main(String[] args) {
 
