@@ -47,12 +47,13 @@ public class MyClient {
 			messageTracker = receiveCompliantData("OK", dataReader);
 
 			//While the last message from ds-server is not NONE do // jobs n - 1
-			while(messageTracker != null && !messageTracker.isEmpty() && !messageTracker.equals("NONE")){
+			while(!messageTracker.isEmpty() && !messageTracker.equals("NONE")){
 				//Send REDY
 				sendData("REDY", dataOut);
 
 				//Receive a message // typically one of the following: JOBN, JCPL, NONE
 				jobData = processJob(receiveData(dataReader));
+				assert jobData != null;
 				messageTracker = jobData[0];
 
 				//Identify the first capable server type as long as the last message contained job information
@@ -67,8 +68,6 @@ public class MyClient {
 					serversCalculated = true;
 					//Receive .
 					messageTracker = receiveCompliantData(".", dataReader);
-				} else {
-
 				}
 
 				//If the message received at Step 10 is JOBN
@@ -88,7 +87,7 @@ public class MyClient {
 					serversCalculated = true;
 					continue;
 				} else {
-					if(debug == true) {
+					if(debug) {
 						System.out.println("Received " + jobData[0] + ". Failed to schedule, expected JOBN.");
 					}
 					break;
@@ -116,7 +115,7 @@ public class MyClient {
 	public static void sendData(String s, OutputStream o) throws IOException {
 		String messageToSend = s + "\n";
 		o.write(messageToSend.getBytes());
-		if(debug == true) {
+		if(debug) {
 			System.out.println("Sent " + s + ".");
 		}
 		o.flush();
@@ -124,7 +123,7 @@ public class MyClient {
 
 	public static String receiveData(BufferedReader b) throws IOException {
 		String messageReceived = b.readLine();
-		if(debug == true) {
+		if(debug) {
 			System.out.println("Received " + messageReceived + ".");
 		}
 		return messageReceived;
@@ -134,17 +133,17 @@ public class MyClient {
 		if(s != null && !s.isEmpty()) {
 			String messageReceived = b.readLine();
 			if (messageReceived.equals(s)) {
-				if(debug == true) {
+				if(debug) {
 					System.out.println("Received " + messageReceived + ". Authenticated.");
 				}
 			} else {
-				if(debug == true) {
+				if(debug) {
 					System.out.println("Received " + messageReceived + ". Failed to authenticate, expected " + s + ".");
 				}
 			}
 			return messageReceived;
 		} else {
-			if(debug == true) {
+			if(debug) {
 				System.out.println("Received a null or empty String. Failed to authenticate.");
 			}
 			return "NONE";
@@ -160,68 +159,87 @@ public class MyClient {
 		int numServers = Integer.parseInt(serverData[1]);
 		ArrayList<String[]> serverDataArray = new ArrayList<String[]>();
 
-		if(debug == true) {
+		if(debug) {
 			System.out.println("Created empty serverDataArray Array List with length " + numServers + ".");
 		}
 
 		for(int i = 0; i < numServers; i++){
 			s = b.readLine();
-			if(debug == true) {
+			if(debug) {
 				//System.out.println(i + " is still less than " + numServers + " continue reading and splitting.");
 				System.out.println("Server at location " + i + " has info: " + s + ".");
 			}
 			serverDataArray.add(s.split(" "));
-			if(debug == true) {
+			if(debug) {
 				System.out.println("Splitting server " + i + " info into serverDataArray location " + i + ".");
 			}
 		}
 
-		if(debug == true) {
+		if(debug) {
 			System.out.println("Successfully split all server info into serverDataArray" + ".");
 		}
 
-		String typeFirstCapableServer = null;
-		String idFirstCapableServer = null;
+		String typeTargetServer = null;
+		String idTargetServer = null;
+		String typeLargestServer = null;
+		String idLargestServer = null;
+		int bestFitTester = 9999; //used to test the last assigned server's cores against the currently compared server, assigned arbitrarily large number to initialize
+		int largestTester = 9999; //used to test the largest server in case no server has more or equal cores to numCPU
 		int numCPU = Integer.parseInt(ncpu);
-		boolean foundFirstCapableServer = false;
+		boolean foundTargetServer = false;
 
-		if(debug == true) {
+		if(debug) {
 			System.out.println("Required number of CPUs is " + numCPU + ".");
 		}
 
 		//get the named type of the firstCapable server and its ID
 		for(int i = 0; i < serverDataArray.size(); i++){
-			if(debug == true) {
-				if(!foundFirstCapableServer) {
-					System.out.println("Finding first capable server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
+			if(debug) {
+				System.out.println("Finding best-fit server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
+			}
+			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && bestFitTester > Integer.parseInt(serverDataArray.get(i)[4])) { // finds best fitting server
+				typeTargetServer = serverDataArray.get(i)[0];
+				idTargetServer = serverDataArray.get(i)[1];
+				bestFitTester = Integer.parseInt(serverDataArray.get(i)[4]);
+				if(debug) {
+					System.out.println("Fitting server identified. Type is " + typeTargetServer + " and ID is " + idTargetServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
 				}
 			}
-			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && foundFirstCapableServer == false) {
-				typeFirstCapableServer = serverDataArray.get(i)[0];
-				idFirstCapableServer = serverDataArray.get(i)[1];
-				if(debug == true) {
-					System.out.println("First capable server identified. Type is " + typeFirstCapableServer + " and ID is " + idFirstCapableServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
+			if(numCPU - Integer.parseInt(serverDataArray.get(i)[4]) < largestTester) { // finds largest server
+				typeLargestServer = serverDataArray.get(i)[0];
+				idLargestServer = serverDataArray.get(i)[1];
+				largestTester = numCPU - Integer.parseInt(serverDataArray.get(i)[4]);
+				if(debug) {
+					System.out.println("Largest server identified. Type is " + typeLargestServer + " and ID is " + idLargestServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
 				}
-				foundFirstCapableServer = true;
 			}
 		}
 
-		if(typeFirstCapableServer == null || typeFirstCapableServer.isEmpty()){
-			if(debug == true){
-				System.out.println("No capable server identified, returning empty string array");
-			}
-			String[] noCapableServers = new String[2];
-			noCapableServers[0] = " ";
-			noCapableServers[1] = " ";
-			return noCapableServers;
-		} else {
-			if(debug == true) {
-				System.out.println("Finished calculating serverDataArray. The first capable server ID is " + idFirstCapableServer + " and is of type " + typeFirstCapableServer + ".");
+		if(typeTargetServer != null) {
+			foundTargetServer = true;
+		}
+
+		if(!foundTargetServer){
+			if(debug){
+				System.out.println("No fitting server identified. Returning the largest server identified. Largest server ID is " + idLargestServer + " and is of type " + typeLargestServer + ".");
 			}
 
 			String[] calculatedServers = new String[2];
-			calculatedServers[0] = typeFirstCapableServer;
-			calculatedServers[1] = idFirstCapableServer;
+			calculatedServers[0] = typeLargestServer;
+			calculatedServers[1] = idLargestServer;
+
+			//Send OK
+			sendData("OK", o);
+
+			return calculatedServers;
+		} else {
+			if(debug) {
+				System.out.println("Finished calculating serverDataArray. The best-fit server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
+			}
+
+			String[] calculatedServers = new String[2];
+			calculatedServers[0] = typeTargetServer;
+			calculatedServers[1] = idTargetServer;
 
 			//Send OK
 			sendData("OK", o);
@@ -243,13 +261,13 @@ public class MyClient {
 				returnData[4] = jobData[6]; // required disk space
 			} else {
 				returnData[0] = jobData[0]; // message type failsafe
-				if(debug == true) {
+				if(debug) {
 					System.out.println("Received " + returnData[0] + ". Failed to process job, expected JOBN.");
 				}
 			}
 			return returnData;
 		} else {
-			if(debug == true) {
+			if(debug) {
 				System.out.println("Received a null or empty String. Failed to process job.");
 			}
 			return null;
@@ -258,7 +276,7 @@ public class MyClient {
 
 	public static void scheduleJob(String[] sa, String s, int i, OutputStream o, BufferedReader b) throws IOException {
 		//Schedule a job // SCHD
-		if(debug == true) {
+		if(debug) {
 			System.out.println(sa[0] + " received, start scheduling job with job ID as " + sa[1] + ", with number of " + s + "-type servers to schedule to being " + i + ".");
 		}
 		String jobMessage = "SCHD " + sa[1] + " " + s + " " + i;
