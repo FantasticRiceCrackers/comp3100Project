@@ -54,7 +54,7 @@ public class MyClient {
 				//Receive a message // typically one of the following: JOBN, JCPL, NONE
 				jobData = processJob(receiveData(dataReader));
 
-				//Identify the first capable server type as long as the last message contained job information
+				//Identify the best-fit server type as long as the last message contained job information
 				if(!serversCalculated && jobData[0].equals("JOBN")) {
 					//Send a GETS Capable message
 					sendData("GETS Capable " + jobData[2] + " " + jobData[3] + " " + jobData[4], dataOut);
@@ -178,16 +178,16 @@ public class MyClient {
 			System.out.println("Required number of CPUs is " + numCPU + ".");
 		}
 
-		//get the named type of the first-fit server and its ID
+		//get the named type of the best fitting server and its ID
 		for(int i = 0; i < serverDataArray.size(); i++){
 			if(debug) {
-				System.out.println("Finding first-fit server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
+				System.out.println("Finding best-fit server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
 			}
-			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && foundTargetServer == false) { // finds first-fit server
+			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && foundTargetServer == false) { // finds best-fit server
 				typeTargetServer = serverDataArray.get(i)[0];
 				idTargetServer = serverDataArray.get(i)[1];
 				if(debug) {
-					System.out.println("First-fit server identified. Type is " + typeTargetServer + " and ID is " + idTargetServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
+					System.out.println("Best-fit server identified. Type is " + typeTargetServer + " and ID is " + idTargetServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
 				}
 				foundTargetServer = true;
 			}
@@ -196,16 +196,12 @@ public class MyClient {
 		String[] calculatedServers = new String[2];
 
 		if(!foundTargetServer){
-
-			typeTargetServer = serverDataArray.get(serverDataArray.size()-1)[0];
-			idTargetServer = serverDataArray.get(serverDataArray.size()-1)[1];
-
 			if(debug){
-				System.out.println("No first-fit server identified. Returning the last server identified. Last server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
+				System.out.println("No best-fit server identified. Returning the last server identified. Last server ID is " + serverDataArray.get(serverDataArray.size()-1)[1] + " and is of type " + serverDataArray.get(serverDataArray.size()-1)[0] + ".");
 			}
 
-			calculatedServers[0] = typeTargetServer;
-			calculatedServers[1] = idTargetServer;
+			calculatedServers[0] = serverDataArray.get(serverDataArray.size()-1)[0];
+			calculatedServers[1] = serverDataArray.get(serverDataArray.size()-1)[1];
 
 			//Send OK
 			sendData("OK", o);
@@ -213,7 +209,7 @@ public class MyClient {
 			return calculatedServers;
 		} else {
 			if(debug) {
-				System.out.println("First-fit server identified. First-fit server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
+				System.out.println("Best-fit server identified. Best-fit server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
 			}
 
 			calculatedServers[0] = typeTargetServer;
