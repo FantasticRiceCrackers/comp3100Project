@@ -4,21 +4,21 @@ import java.util.ArrayList;
 
 public class MyClient {
 
-	static boolean debug = true;
+	static boolean debug = false;
 
 	public static void main(String[] args) {
 
 		try {
 			//Create a socket
 			//Keep track of the largest server type and the number of servers of that type
-			String typeFirstCapableServer = "";
-			int idFirstCapableServer = 0;
+			String typeCapableServer = "";
+			int idCapableServer = 0;
 			//Boolean keeping track of whether nRecs should be processed or not
 			boolean serversCalculated = false;
 			//String to track what the last message the Server sent to the Client
 			String messageTracker;
 			//String array to store job data
-			String[] jobData;
+			String[] jobData = new String[0];
 			//The socket itself, begins not initialised
 			Socket sckt;
 
@@ -53,8 +53,6 @@ public class MyClient {
 
 				//Receive a message // typically one of the following: JOBN, JCPL, NONE
 				jobData = processJob(receiveData(dataReader));
-				assert jobData != null;
-				messageTracker = jobData[0];
 
 				//Identify the first capable server type as long as the last message contained job information
 				if(!serversCalculated && jobData[0].equals("JOBN")) {
@@ -63,29 +61,21 @@ public class MyClient {
 
 					//Receive DATA nRecs recSize
 					String[] calculatedServers = calculateServers(receiveData(dataReader), dataOut, dataReader, jobData[2]);
-					typeFirstCapableServer = calculatedServers[0];
-					idFirstCapableServer = Integer.parseInt(calculatedServers[1]);
+					typeCapableServer = calculatedServers[0];
+					idCapableServer = Integer.parseInt(calculatedServers[1]);
 					serversCalculated = true;
 					//Receive .
 					messageTracker = receiveCompliantData(".", dataReader);
 				}
 
 				//If the message received at Step 10 is JOBN
-				if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("JOBN")){
-					//Make sure the jobs are being distributed evenly among the largest servers
-					//if(serverToTask == numCapableServer) {
-					//	serverToTask = 0;
-					//}
+				if(jobData[0].equals("JOBN")){
 					//Schedule job and increment serverToTask so that the next job is scheduled to a different server of the same type
-					scheduleJob(jobData, typeFirstCapableServer, idFirstCapableServer, dataOut, dataReader);
+					scheduleJob(jobData, typeCapableServer, idCapableServer, dataOut, dataReader);
 					serversCalculated = false;
 					messageTracker = receiveCompliantData("OK", dataReader);
-				} else if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("OK")){
+				} else if(jobData[0].equals("JCPL")) {
 					serversCalculated = true;
-					continue;
-				} else if(jobData[0] != null && !jobData[0].isEmpty() && jobData[0].equals("JCPL")) {
-					serversCalculated = true;
-					continue;
 				} else {
 					if(debug) {
 						System.out.println("Received " + jobData[0] + ". Failed to schedule, expected JOBN.");
@@ -181,10 +171,6 @@ public class MyClient {
 
 		String typeTargetServer = null;
 		String idTargetServer = null;
-		String typeLargestServer = null;
-		String idLargestServer = null;
-		int bestFitTester = 9999; //used to test the last assigned server's cores against the currently compared server, assigned arbitrarily large number to initialize
-		int largestTester = 9999; //used to test the largest server in case no server has more or equal cores to numCPU
 		int numCPU = Integer.parseInt(ncpu);
 		boolean foundTargetServer = false;
 
@@ -192,41 +178,34 @@ public class MyClient {
 			System.out.println("Required number of CPUs is " + numCPU + ".");
 		}
 
-		//get the named type of the firstCapable server and its ID
+		//get the named type of the first-fit server and its ID
 		for(int i = 0; i < serverDataArray.size(); i++){
 			if(debug) {
-				System.out.println("Finding best-fit server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
+				System.out.println("Finding first-fit server type and ID. Server " + i + " has CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + " which is compared against required CPU count of " + numCPU + ".");
 			}
-			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && bestFitTester > Integer.parseInt(serverDataArray.get(i)[4])) { // finds best fitting server
+			if(numCPU <= Integer.parseInt(serverDataArray.get(i)[4]) && foundTargetServer == false) { // finds first-fit server
 				typeTargetServer = serverDataArray.get(i)[0];
 				idTargetServer = serverDataArray.get(i)[1];
-				bestFitTester = Integer.parseInt(serverDataArray.get(i)[4]);
 				if(debug) {
-					System.out.println("Fitting server identified. Type is " + typeTargetServer + " and ID is " + idTargetServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
+					System.out.println("First-fit server identified. Type is " + typeTargetServer + " and ID is " + idTargetServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
 				}
-			}
-			if(numCPU - Integer.parseInt(serverDataArray.get(i)[4]) < largestTester) { // finds largest server
-				typeLargestServer = serverDataArray.get(i)[0];
-				idLargestServer = serverDataArray.get(i)[1];
-				largestTester = numCPU - Integer.parseInt(serverDataArray.get(i)[4]);
-				if(debug) {
-					System.out.println("Largest server identified. Type is " + typeLargestServer + " and ID is " + idLargestServer + ", and has a CPU count of " + Integer.parseInt(serverDataArray.get(i)[4]) + ".");
-				}
+				foundTargetServer = true;
 			}
 		}
 
-		if(typeTargetServer != null) {
-			foundTargetServer = true;
-		}
+		String[] calculatedServers = new String[2];
 
 		if(!foundTargetServer){
+
+			typeTargetServer = serverDataArray.get(serverDataArray.size()-1)[0];
+			idTargetServer = serverDataArray.get(serverDataArray.size()-1)[1];
+
 			if(debug){
-				System.out.println("No fitting server identified. Returning the largest server identified. Largest server ID is " + idLargestServer + " and is of type " + typeLargestServer + ".");
+				System.out.println("No first-fit server identified. Returning the last server identified. Last server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
 			}
 
-			String[] calculatedServers = new String[2];
-			calculatedServers[0] = typeLargestServer;
-			calculatedServers[1] = idLargestServer;
+			calculatedServers[0] = typeTargetServer;
+			calculatedServers[1] = idTargetServer;
 
 			//Send OK
 			sendData("OK", o);
@@ -234,10 +213,9 @@ public class MyClient {
 			return calculatedServers;
 		} else {
 			if(debug) {
-				System.out.println("Finished calculating serverDataArray. The best-fit server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
+				System.out.println("First-fit server identified. First-fit server ID is " + idTargetServer + " and is of type " + typeTargetServer + ".");
 			}
 
-			String[] calculatedServers = new String[2];
 			calculatedServers[0] = typeTargetServer;
 			calculatedServers[1] = idTargetServer;
 
