@@ -71,7 +71,7 @@ public class MyClient {
 				//If the message received at Step 10 is JOBN
 				if(jobData[0].equals("JOBN")){
 					//Schedule job and increment serverToTask so that the next job is scheduled to a different server of the same type
-					scheduleJob(jobData, typeCapableServer, idCapableServer, dataOut, dataReader);
+					scheduleJob(jobData, typeCapableServer, idCapableServer, dataOut);
 					serversCalculated = false;
 					messageTracker = receiveCompliantData("OK", dataReader);
 				} else if(jobData[0].equals("JCPL")) {
@@ -197,11 +197,11 @@ public class MyClient {
 
 		if(!foundTargetServer){
 			if(debug){
-				System.out.println("No best-fit server identified. Returning the last server identified. Last server ID is " + serverDataArray.get(serverDataArray.size()-1)[1] + " and is of type " + serverDataArray.get(serverDataArray.size()-1)[0] + ".");
+				System.out.println("No best-fit server identified. Returning the first sorted server in the array list. First server ID is " + serverDataArray.get(serverDataArray.size()-1)[1] + " and is of type " + serverDataArray.get(serverDataArray.size()-1)[0] + ".");
 			}
 
-			calculatedServers[0] = serverDataArray.get(serverDataArray.size()-1)[0];
-			calculatedServers[1] = serverDataArray.get(serverDataArray.size()-1)[1];
+			calculatedServers[0] = serverDataArray.get(0)[0];
+			calculatedServers[1] = serverDataArray.get(0)[1];
 
 			//Send OK
 			sendData("OK", o);
@@ -248,10 +248,10 @@ public class MyClient {
 		}
 	}
 
-	public static void scheduleJob(String[] sa, String s, int i, OutputStream o, BufferedReader b) throws IOException {
+	public static void scheduleJob(String[] sa, String s, int i, OutputStream o) throws IOException {
 		//Schedule a job // SCHD
 		if(debug) {
-			System.out.println(sa[0] + " received, start scheduling job with job ID as " + sa[1] + ", with number of " + s + "-type servers to schedule to being " + i + ".");
+			System.out.println(sa[0] + " received, start scheduling job with job ID as " + sa[1] + ", to " + s + "-type server with server ID of " + i + ".");
 		}
 		String jobMessage = "SCHD " + sa[1] + " " + s + " " + i;
 		sendData(jobMessage, o);
